@@ -10,6 +10,7 @@ import AuthRouter from './components/AuthRouter';
 import ProductCatalogue from './pages/ProductCatalogue';
 import SellerDashboard from './components/SellerDashboard';
 import { useAuth } from './context/AuthContext';
+import PaymentPage from './pages/PaymentPage';
 
 function App() {
   console.log('App component rendering...');
@@ -67,6 +68,7 @@ function AppRoutes() {
           )
         } 
       />
+      <Route path="/payment" element={<PaymentPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

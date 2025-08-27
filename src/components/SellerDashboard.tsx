@@ -30,7 +30,9 @@ import {
   Bell,
   User,
   LogOut,
-  ArrowLeft
+  ArrowLeft,
+  Cross,
+  X
 } from 'lucide-react';
 import SearchBar from './SearchBar';
 
@@ -385,7 +387,7 @@ const SellerDashboard: React.FC = () => {
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <EyeOff className="w-6 h-6" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
             </div>

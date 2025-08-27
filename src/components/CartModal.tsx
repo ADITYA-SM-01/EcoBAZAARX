@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { X, Plus, Minus, Trash2, ShoppingCart, Leaf } from 'lucide-react';
 
@@ -18,6 +19,7 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
   } = useCart();
   
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleRemoveItem = async (productId: string) => {
     setIsRemoving(productId);
@@ -189,7 +191,13 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
                     {totalItems} {totalItems === 1 ? 'item' : 'items'}
                   </div>
                 </div>
-                <button className="eco-button px-8 py-3 text-base">
+                <button
+                  className="eco-button px-8 py-3 text-base"
+                  onClick={() => {
+                    onClose();
+                    navigate('/payment');
+                  }}
+                >
                   Proceed to Checkout
                 </button>
               </div>
