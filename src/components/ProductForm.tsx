@@ -8,7 +8,6 @@ import {
   Image as ImageIcon, 
   Tag, 
   FileText,
-  Upload,
   X,
   Save,
   Loader2

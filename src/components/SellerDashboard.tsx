@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState,  } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useProductContext } from '../context/ProductContext';
 import { Product } from '../types/product';
@@ -8,30 +8,23 @@ import {
   Plus, 
   Package, 
   TrendingUp, 
-  Users, 
+   
   DollarSign, 
-  BarChart3, 
+  
   Edit, 
-  Trash2, 
-  Eye, 
+  Trash2,  
   Search,
-  Filter,
+
   SortAsc,
-  Calendar,
+
   Star,
   Leaf,
-  ShoppingCart,
-  Heart,
-  EyeOff,
-  MoreVertical,
-  Download,
-  Upload,
+ 
   Settings,
   Bell,
   User,
   LogOut,
   ArrowLeft,
-  Cross,
   X
 } from 'lucide-react';
 import SearchBar from './SearchBar';

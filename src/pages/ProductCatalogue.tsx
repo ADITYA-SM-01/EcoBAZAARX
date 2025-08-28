@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../context/AuthContext';
-import { useProductContext } from '../context/ProductContext';
+
 import Navigation from '../components/Navigation';
 import ProductGrid from '../components/ProductGrid';
 import CartModal from '../components/CartModal';
@@ -49,10 +49,8 @@ const ProductCatalogue: React.FC = () => {
       {/* Navigation */}
       <Navigation 
         onSearch={handleSearch} 
-        onThemeChange={handleThemeChange} 
         onCartOpen={() => setIsCartOpen(true)}
         onWishlistClick={handleWishlistClick}
-        user={user}
       />
 
       {/* Main Content */}

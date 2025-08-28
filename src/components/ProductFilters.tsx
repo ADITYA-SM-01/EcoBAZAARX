@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useProductContext } from '../context/ProductContext';
 import { SortOption, FilterOptions } from '../types/product';
 import { categories } from '../data/products';
-import { Filter, Leaf, RefreshCw, SortAsc, SortDesc, Search, X } from 'lucide-react';
+import { Filter, Leaf, RefreshCw, SortAsc, SortDesc,} from 'lucide-react';
 import SearchBar from './SearchBar';
 
 const ProductFilters: React.FC = () => {
