@@ -1,5 +1,6 @@
 import { PieChart } from "lucide-react";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import ThemeSelector from './ThemeSelector';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
@@ -26,6 +27,7 @@ import {
   X
 } from 'lucide-react';
 import { SortOption } from '../types/product';
+import { getImageUrl } from '../services/ProductService';
 
 interface NavigationProps {
   onSearch: (query: string) => void;
@@ -34,13 +36,16 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlistClick }) => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showSellerConfirm, setShowSellerConfirm] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const { user, isAuthenticated, logout, updateUser } = useAuth();
   const { totalItems } = useCart();
   const { currentTheme, setTheme, availableThemes } = useTheme();
   const { filterOptions, sortProducts, searchProducts, products, setCO2MaxFilter, setMinCO2Filter } = useProductContext();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showThemeMenu, setShowThemeMenu] = useState(false);
+
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -66,6 +71,22 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
       setShowSuggestions(false);
     }, 200);
   };
+
+  const handleSellerDashboardClick = useCallback(() => {
+    if (user?.role === 'seller') {
+      navigate('/seller/management');
+    }
+  }, [user?.role, navigate]);
+
+  const handleProfileClick = useCallback(() => {
+    if (isAuthenticated && user) {
+      navigate('/profile');
+      setShowUserMenu(false);
+    } else {
+      // Redirect to login if not authenticated
+      navigate('/login');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +129,45 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
     setCO2MaxFilter(co2Range.max > 1000 ? co2Range.max : undefined);
   };
 
+  const handleBecomeSeller = async () => {
+    try {
+      if (!user?.name) return;
+      
+      const response = await fetch(`http://localhost:8090/req/users/${encodeURIComponent(user.name)}/become-seller`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to become a seller');
+      }
+
+      const updatedUser = {
+        ...user,
+        isSeller: true,
+        role: 'seller' as const
+      };
+      updateUser(updatedUser);
+      setShowSellerConfirm(false);
+      setShowUserMenu(false);
+      setShowCelebration(true);
+      
+      // Hide celebration after 5 seconds and navigate
+      setTimeout(() => {
+        setShowCelebration(false);
+        navigate('/seller');
+      }, 5000);
+    } catch (error) {
+      console.error('Error becoming a seller:', error);
+      setShowSellerConfirm(false);
+      alert('Failed to become a seller. Please try again.');
+    }
+  };
+
   const handleLogout = () => {
+    setShowLogoutConfirm(false);
     logout();
     setShowUserMenu(false);
   };
@@ -138,8 +197,9 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
     return suggestions;
   };
 
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
   return (
-    <header className="gradient-header shadow-lg border-b border-white/20 sticky top-0 z-40">
+    <header className="navbar-glass sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -226,7 +286,7 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
                         >
                           <div className="flex items-center gap-3">
                             <img
-                              src={product.image}
+                              src={getImageUrl(product)}
                               alt={product.name}
                               className="w-12 h-12 object-cover rounded-lg"
                             />
@@ -523,10 +583,13 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
                     {/* Navigation Links */}
                     <div className="py-2">
                       {/* Profile */}
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                      <button
+                        onClick={handleProfileClick}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                      >
                         <User className="w-4 h-4" />
                         Profile
-                      </button>
+                      </button>                      
 
                       {/* Role-specific Navigation */}
                       {user?.role === 'admin' && (
@@ -551,23 +614,13 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
                           </button>
                           <button 
                             onClick={() => {
-                              navigate('/analytics');
+                              navigate('/admin/analytics');
                               setShowUserMenu(false);
                             }}
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
                           >
                             <BarChart3 className="w-4 h-4" />
                             Analytics
-                          </button>
-                          <button 
-                            onClick={() => {
-                              navigate('/advanced-analytics');
-                              setShowUserMenu(false);
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                          >
-                            <PieChart className="w-4 h-4 text-eco-600" />
-                            Advanced Analytics
                           </button>
                         </React.Fragment>
                       )}
@@ -584,7 +637,13 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
                             <Package className="w-4 h-4" />
                             Seller Dashboard
                           </button>
-                          <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              navigate('/seller/analytics');
+                              setShowUserMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                          >
                             <BarChart3 className="w-4 h-4" />
                             Sales Analytics
                           </button>
@@ -593,44 +652,195 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
 
                       {user?.role === 'customer' && (
                         <>
-                          <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              navigate('/orders');
+                              setShowUserMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
                             <Package className="w-4 h-4" />
                             My Orders
                           </button>
-                          <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              navigate('/leaderboard');
+                              setShowUserMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
                             <Trophy className="w-4 h-4" />
                             Leaderboard
                           </button>
-                          <button 
-                            onClick={() => {
-                              // In a real app, this would redirect to a seller application form
-                              alert('Contact support to become a seller!');
-                              setShowUserMenu(false);
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                          >
-                            <Store className="w-4 h-4" />
-                            Become a Seller
-                          </button>
+                          {!user?.isSeller && (
+                            <button 
+                              onClick={() => setShowSellerConfirm(true)}
+                              className="w-full text-left px-4 py-2 text-sm text-eco-600 hover:bg-eco-50 transition-colors flex items-center gap-2"
+                            >
+                              <Store className="w-4 h-4" />
+                              Become a Seller
+                            </button>
+                          )}
                         </>
                       )}
 
                       {/* Settings */}
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                      <button 
+                        onClick={() => {
+                          navigate('/settings');
+                          setShowUserMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                      >
                         <Settings className="w-4 h-4" />
                         Settings
                       </button>
                     </div>
 
+                    {/* Role Switch */}
+                    {user?.isSeller && (
+                      <div className="border-t border-gray-200 pt-2">
+                        <button
+                          onClick={() => {
+                            updateUser({ ...user, role: user.role === 'seller' ? 'customer' : 'seller' });
+                            navigate(user.role === 'seller' ? '/' : '/seller');
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-eco-600 hover:bg-eco-50 transition-colors flex items-center gap-2"
+                        >
+                          {user.role === 'seller' ? <User className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                          Switch to {user.role === 'seller' ? 'Customer' : 'Seller'} View
+                        </button>
+                      </div>
+                    )}
+
                     {/* Logout */}
                     <div className="border-t border-gray-200 pt-2">
                       <button
-                        onClick={handleLogout}
+                        onClick={() => setShowLogoutConfirm(true)}
                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
                       >
                         <LogOut className="w-4 h-4" />
                         Logout
                       </button>
+      {/* Become Seller Confirmation Modal */}
+      {showSellerConfirm && (
+        <div className="fixed inset-0 z-[9999] overflow-hidden">
+          <div className="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm" />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all scale-100 opacity-100 animate-fade-in">
+            <div className="w-16 h-16 mx-auto mb-6 bg-eco-100 rounded-full flex items-center justify-center">
+              <Store className="w-8 h-8 text-eco-600" />
+            </div>
+            <h3 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white text-center">Become a Seller?</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-8 text-center">
+              Are you ready to start your journey as a seller on EcoBAZZARX? You'll be able to list and sell your eco-friendly products.
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                className="px-6 py-2.5 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium transition-colors duration-200"
+                onClick={() => setShowSellerConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-6 py-2.5 rounded-xl bg-eco-600 text-white hover:bg-eco-700 font-medium transition-colors duration-200 shadow-lg shadow-eco-600/20"
+                onClick={handleBecomeSeller}
+              >
+                Let's Go!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Celebration Animation */}
+      {showCelebration && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm animate-fade-in pointer-events-none" />
+          <div className="relative text-center">
+            {/* Confetti particles */}
+            <div className="absolute -inset-20 overflow-hidden pointer-events-none">
+              {[...Array(30)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute animate-confetti"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: '-20px',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: Math.random() > 0.5 ? '50%' : '0',
+                    backgroundColor: ['#22c55e', '#eab308', '#3b82f6', '#ec4899', '#8b5cf6'][Math.floor(Math.random() * 5)],
+                    animationDelay: `${Math.random() * 3}s`,
+                    animationDuration: `${3 + Math.random() * 2}s`
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="animate-bounce-custom mb-4">
+              <div className="w-24 h-24 bg-eco-500 rounded-full flex items-center justify-center mx-auto shadow-2xl">
+                <Store className="w-12 h-12 text-white" />
+              </div>
+            </div>
+            <h2 className="text-4xl font-bold text-white mb-4 animate-fade-in-up">
+              Congratulations!
+            </h2>
+            <p className="text-xl text-white/90 animate-fade-in-up delay-200">
+              You are now a seller on EcoBAZZARX!
+            </p>
+            <button
+              onClick={() => setShowCelebration(false)}
+              className="mt-8 px-6 py-3 bg-white text-eco-500 text-lg rounded-full hover:bg-eco-50 transition-all hover:scale-105 animate-fade-in-up delay-300"
+            >
+              Start Your Seller Journey
+            </button>
+            <div className="absolute inset-0 -z-10 animate-confetti">
+              {[...Array(50)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-2 h-2 rounded-full"
+                  style={{
+                    backgroundColor: ['#16a34a', '#2563eb', '#9333ea', '#f59e0b'][i % 4],
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animation: `confetti 1s ease-out ${Math.random() * 3}s`,
+                    transform: `rotate(${Math.random() * 360}deg)`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[9999] overflow-hidden">
+          <div className="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm" />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all scale-100 opacity-100 animate-fade-in">
+            <div className="w-16 h-16 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
+              <LogOut className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Sign Out?</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
+              Are you sure you want to sign out from your account?
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                className="px-6 py-2.5 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium transition-colors duration-200"
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-6 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 font-medium transition-colors duration-200 shadow-lg shadow-red-600/20"
+                onClick={handleLogout}
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
                     </div>
                   </div>
                 )}
@@ -648,3 +858,4 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
 };
 
 export default Navigation;
+

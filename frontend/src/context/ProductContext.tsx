@@ -151,7 +151,7 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({ children }) =>
     setProducts(prev => prev.filter(p => p.id !== id));
   };
 
-  const getProductsBySeller = (sellerId: string) => {
+  const getProductsBySeller = (_: string) => {
     // In a real app, this would filter by actual seller ID
     // For now, return all products as mock data
     return products;

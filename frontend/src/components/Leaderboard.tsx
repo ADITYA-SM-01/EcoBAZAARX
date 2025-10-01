@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useLeaderboard } from '../context/LeaderboardContext';
 import { useAuth } from '../context/AuthContext';
-import { Trophy, Medal, Crown, TrendingUp, Leaf, Users, BarChart3, ShoppingBag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Trophy, Medal, Crown, TrendingUp, Leaf, Users, BarChart3, ShoppingBag, ArrowLeft } from 'lucide-react';
 
 const Leaderboard: React.FC = () => {
+  const navigate = useNavigate();
   const { leaderboard, getTopUsers } = useLeaderboard();
   const { user } = useAuth();
   const [timeFilter, setTimeFilter] = useState<'all' | 'month' | 'week'>('all');
@@ -54,6 +56,17 @@ const Leaderboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-eco-50 to-eco-100 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Back Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back</span>
+          </button>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full mb-6">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Filter, TrendingUp, Leaf, Package } from 'lucide-react';
 import { useProductContext } from '../context/ProductContext';
 import { Product } from '../types/product';
+import { getImageUrl } from '../services/ProductService';
 
 interface SearchBarProps {
   placeholder?: string;
@@ -162,7 +163,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 >
                   <div className="flex items-center gap-3">
                     <img
-                      src={product.image}
+                      src={getImageUrl(product)}
                       alt={product.name}
                       className="w-10 h-10 object-cover rounded-lg"
                     />

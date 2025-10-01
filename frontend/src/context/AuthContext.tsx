@@ -6,6 +6,7 @@ interface AuthContextType extends AuthState {
   signup: (credentials: SignupCredentials) => Promise<boolean>;
   logout: () => void;
   updateUser: (user: User) => void;
+  currentUser: User | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,77 +70,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setAuthState(prev => ({ ...prev, isLoading: true }));
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Extract username from email
+      const username = credentials.email.split('@')[0];
       
-      // Mock authentication logic
-      if (credentials.email === 'admin@ecobazzarx.com' && credentials.password === 'admin123') {
-        const user: User = {
-          id: '1',
-          email: credentials.email,
-          name: 'Admin User',
-          role: 'admin',
-          createdAt: new Date(),
-          ecoPoints: 0,
-          totalCarbonSaved: 0,
-          productsPurchased: 0,
-          joinDate: new Date(),
-          isVerified: true
-        };
-        
-        localStorage.setItem('ecobazzarx_user', JSON.stringify(user));
-        setAuthState({
-          user,
-          isAuthenticated: true,
-          isLoading: false
-        });
-        return true;
-      } else if (credentials.email === 'seller@ecobazzarx.com' && credentials.password === 'seller123') {
-        const user: User = {
-          id: '2',
-          email: credentials.email,
-          name: 'Seller User',
-          role: 'seller',
-          createdAt: new Date(),
-          ecoPoints: 0,
-          totalCarbonSaved: 0,
-          productsPurchased: 0,
-          joinDate: new Date(),
-          isVerified: true
-        };
-        
-        localStorage.setItem('ecobazzarx_user', JSON.stringify(user));
-        setAuthState({
-          user,
-          isAuthenticated: true,
-          isLoading: false
-        });
-        return true;
-      } else if (credentials.email === 'customer@ecobazzarx.com' && credentials.password === 'customer123') {
-        const user: User = {
-          id: '3',
-          email: credentials.email,
-          name: 'Customer User',
-          role: 'customer',
-          createdAt: new Date(),
-          ecoPoints: 0,
-          totalCarbonSaved: 0,
-          productsPurchased: 0,
-          joinDate: new Date(),
-          isVerified: true
-        };
-        
-        localStorage.setItem('ecobazzarx_user', JSON.stringify(user));
-        setAuthState({
-          user,
-          isAuthenticated: true,
-          isLoading: false
-        });
-        return true;
-      } else {
+      // Fetch user data from API
+      const response = await fetch(`http://localhost:8090/req/users/${username}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
         throw new Error('Invalid credentials');
       }
+
+      const userData = await response.json();
+      
+      const user: User = {
+        id: userData.id || username,
+        email: credentials.email,
+        name: userData.name || username,
+        role: userData.role || 'customer',
+        createdAt: new Date(userData.createdAt || Date.now()),
+        ecoPoints: userData.ecoPoints || 0,
+        totalCarbonSaved: userData.totalCarbonSaved || 0,
+        productsPurchased: userData.productsPurchased || 0,
+        joinDate: new Date(userData.joinDate || Date.now()),
+        isVerified: userData.isVerified || true
+      };
+      
+      localStorage.setItem('ecobazzarx_user', JSON.stringify(user));
+      setAuthState({
+        user,
+        isAuthenticated: true,
+        isLoading: false
+      });
+      return true;
     } catch (error) {
+      console.error('Login error:', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));
       return false;
     }
@@ -206,7 +175,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     signup,
     logout,
-    updateUser
+    updateUser,
+    currentUser: authState.user
   };
 
   return (

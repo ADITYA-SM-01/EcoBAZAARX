@@ -1,18 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, TrendingUp, Leaf, PieChart } from "lucide-react";
+import {  TrendingUp,  PieChart } from "lucide-react";
 import { useProductContext } from "../context/ProductContext";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  carbonFootprint: number;
-  sold?: number;
-  category: string;
-  sellerId?: string;
-}
+import { Product } from '../types/product';
 
 // Simple chart component for category breakdown
 const CategoryPie: React.FC<{ data: Record<string, number> }> = ({ data }) => {
@@ -48,7 +39,7 @@ const CategoryPie: React.FC<{ data: Record<string, number> }> = ({ data }) => {
 };
 
 const AdvancedAnalytics: React.FC = () => {
-  const { products = [] } = useProductContext?.() || {};
+  const { products = [] }: { products: Product[] } = useProductContext?.() || {};
   const navigate = useNavigate();
   const [categoryData, setCategoryData] = useState<Record<string, number>>({});
   const [sellerLeaderboard, setSellerLeaderboard] = useState<Record<string, number>>({});
@@ -57,13 +48,13 @@ const AdvancedAnalytics: React.FC = () => {
     // Category breakdown
     const catStats: Record<string, number> = {};
     products.forEach((p) => {
-      catStats[p.category] = (catStats[p.category] || 0) + (p.sold || 0);
+      catStats[p.category] = (catStats[p.category] || 0) + (p.unitsSold || 0);
     });
     setCategoryData(catStats);
     // Seller leaderboard
     const sellerStats: Record<string, number> = {};
     products.forEach((p) => {
-      if (p.sellerId) sellerStats[p.sellerId] = (sellerStats[p.sellerId] || 0) + (p.sold || 0);
+      if (p.sellerId) sellerStats[p.sellerId] = (sellerStats[p.sellerId] || 0) + (p.unitsSold || 0);
     });
     setSellerLeaderboard(sellerStats);
   }, [products]);
@@ -101,7 +92,7 @@ const AdvancedAnalytics: React.FC = () => {
         <ul>
           {Object.entries(sellerLeaderboard)
             .sort((a, b) => b[1] - a[1])
-            .map(([seller, sold], i) => (
+            .map(([seller, sold]) => (
               <li key={seller} className="flex justify-between items-center py-2 border-b last:border-b-0">
                 <span className="font-medium">{seller}</span>
                 <span className="text-gray-500">Sold: {sold}</span>

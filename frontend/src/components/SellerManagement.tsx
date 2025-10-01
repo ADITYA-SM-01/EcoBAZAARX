@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Leaf, ShieldBan, CheckCircle2, MoreVertical, ArrowLeft } from "lucide-react";
+import { useAuth } from '../context/AuthContext';
+import { Leaf, ShieldBan, CheckCircle2, MoreVertical, ArrowLeft, Package } from "lucide-react";
 
 interface Seller {
   id: string;
@@ -13,48 +14,98 @@ interface Product {
   name: string;
   sellerId: string;
   carbonFootprint: number;
-  sold: number; // Number of units sold
+  sold: number;
+  price: number;
+  description: string;
+  image?: string;
+  category: string;
+  brand?: string;
+  stock: number;
+  sustainablePackaging: boolean;
+  rating: number;
+  reviews: number;
+  unitsSold: number;
+  isActive: boolean;
 }
 
 const SellerManagement: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
-  const [products, setProducts] = useState<Product[]>([]); // Mock / replace with context
+  console.log('SellerManagement mounted');
+  const { currentUser } = useAuth();
+  console.log('currentUser at mount:', currentUser);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [sellerStats, setSellerStats] = useState<Record<string, number>>({});
+  const [userProducts, setUserProducts] = useState<Product[]>([]);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // Fetch seller's products from API
   useEffect(() => {
-    // Example data (remove if using context)
-    setProducts([
-      { id: "1", name: "Eco Bottle", sellerId: "SellerA", carbonFootprint: 1.2, sold: 120 },
-      { id: "2", name: "Bamboo Brush", sellerId: "SellerB", carbonFootprint: 0.5, sold: 200 },
-      { id: "3", name: "Recycled Bag", sellerId: "SellerA", carbonFootprint: 0.8, sold: 150 },
-    ]);
-  }, []);
+    console.log('useEffect for fetchUserProducts running. currentUser:', currentUser);
+    const fetchUserProducts = async () => {
+      if (!currentUser?.id) {
+        console.log('No currentUser.id available:', currentUser);
+        return;
+      }
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        console.log('Fetching products for seller ID:', currentUser.id);
+        const response = await fetch(`http://localhost:8090/api/products/seller/${currentUser.id}`, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        console.log('API Response:', response.status, response.statusText);
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
+        
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = JSON.parse(responseText);
+        console.log('Parsed products:', data);
+        
+        if (!Array.isArray(data)) {
+          console.warn('API did not return an array:', data);
+          setUserProducts([]);
+        } else {
+          setUserProducts(data);
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(`Failed to load products: ${errorMessage}`);
+        console.error('Error fetching products:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
+    fetchUserProducts();
+  }, [currentUser?.id]);
+
+  // Calculate seller stats from user products
   useEffect(() => {
-    const sellerMap: Record<string, Seller> = {};
-    products.forEach((product: Product) => {
-      if (product.sellerId && !sellerMap[product.sellerId]) {
-        sellerMap[product.sellerId] = {
-          id: product.sellerId,
-          name: product.sellerId,
-          status: "active",
-        };
-      }
-    });
-    setSellers(Object.values(sellerMap));
+    if (!currentUser?.id || !userProducts.length) return;
 
-    const stats: Record<string, number> = {};
-    products.forEach((product: Product) => {
-      if (product.sellerId) {
-        stats[product.sellerId] =
-          (stats[product.sellerId] || 0) +
-          product.carbonFootprint * (product.sold || 0);
-      }
+    const totalCarbonImpact = userProducts.reduce((total, product) => 
+      total + (product.carbonFootprint * (product.unitsSold || 0)), 0);
+
+    setSellers([{
+      id: currentUser.id,
+      name: currentUser.name,
+      status: "active",
+    }]);
+
+    setSellerStats({
+      [currentUser.id]: totalCarbonImpact
     });
-    setSellerStats(stats);
-  }, [products]);
+  }, [currentUser?.id, userProducts]);
 
   const toggleRestriction = (id: string) => {
     setSellers((prev) =>
@@ -81,6 +132,58 @@ const SellerManagement: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
       </div>
 
       <h2 className="text-3xl font-bold mb-6 text-gray-800">Seller Management</h2>
+
+      {/* Your Products Section */}
+      {currentUser && currentUser.role === 'seller' && (
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4 text-gray-800">Your Products</h3>
+          
+          {isLoading && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-eco-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading your products...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
+              <p className="text-red-600">{error}</p>
+            </div>
+          )}
+          {!isLoading && !error && userProducts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {userProducts.map(product => (
+                <div key={product.id} className="bg-white rounded-lg shadow p-4 border border-gray-200">
+                  <div className="flex items-start justify-between">
+                    <div className="w-full">
+                      <h4 className="font-medium text-gray-900">{product.name}</h4>
+                      <div className="mt-2 text-sm text-gray-600 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Leaf className="w-4 h-4 text-green-500" />
+                          <span>{product.carbonFootprint} kg CO₂</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Price: ${product.price}</span>
+                          <span>Stock: {product.stock}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Units Sold: {product.unitsSold || 0}</span>
+                          <span>Rating: {product.rating}/5</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">No products found</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {sellers.map((seller) => {

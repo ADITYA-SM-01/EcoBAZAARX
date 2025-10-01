@@ -39,3 +39,15 @@ export async function deleteProduct(id: number) {
   if (!response.ok) throw new Error("Failed to delete product");
   return true;
 }
+
+// Returns the correct image URL for a product (uploaded or fallback)
+export function getImageUrl(product: { id: string | number; imageUrl?: string | null; image?: string | null }) {
+  if (product.imageUrl) {
+    return product.imageUrl;
+  }
+  if (product.image) {
+    return product.image;
+  }
+  // If backend serves images at /api/products/{id}/image
+  return `http://localhost:8090/api/products/${product.id}/image`;
+}

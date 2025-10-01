@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -44,6 +45,10 @@ public class ProductController {
     public Product getProductById(@PathVariable Long id) {
         return productService.getProductById(id);
     }
+    @GetMapping("/seller/{id}")
+    public List<Product> getAllProductOfSeller(@PathVariable Long id) {
+        return productService.getProductsBySeller(id);
+    }
 
     @PutMapping("/{id}")
     public Product updateProduct(@PathVariable Long id, @RequestBody Product product) {
@@ -55,7 +60,7 @@ public class ProductController {
         productService.deleteProduct(id);
     }
 
-    @PostMapping("/products/{id}/upload")
+    @PostMapping("/{id}/upload")
     public ResponseEntity<String> uploadProductImage(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
@@ -67,14 +72,14 @@ public class ProductController {
             if (!dir.exists()) dir.mkdirs();
 
             // Generate unique filename
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String fileName = id +"."+ Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1);
             Path filePath = Paths.get(uploadDir, fileName);
 
             // Save file
             Files.write(filePath, file.getBytes());
 
             // Build accessible URL
-            String imageUrl = "http://localhost:8090/uploads/" + fileName;
+            String imageUrl = "http://localhost:8090/" + fileName;
 
             // Update product record
             Product product = productRepository.findById(id)

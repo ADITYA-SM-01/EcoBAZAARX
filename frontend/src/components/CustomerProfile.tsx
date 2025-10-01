@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLeaderboard } from '../context/LeaderboardContext';
+import MyOrders from './MyOrders';
 
 import { 
   User, 
@@ -14,14 +15,59 @@ import {
   Camera
 } from 'lucide-react';
 
-const CustomerProfile: React.FC = () => {
+interface CustomerProfileProps {
+  initialTab?: 'overview' | 'purchases' | 'achievements' | 'orders';
+}
+
+const CustomerProfile: React.FC<CustomerProfileProps> = ({ initialTab = 'overview' }) => {
   const { user } = useAuth();
   const { getUserRank } = useLeaderboard();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'purchases' | 'achievements'>('overview');
+  // Initialize activeTab with initialTab and update it when initialTab changes
+  const [activeTab, setActiveTab] = useState<'overview' | 'purchases' | 'achievements' | 'orders'>(initialTab);
+  
+  // Update activeTab when initialTab changes
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
-  // Mock data - in real app this would come from API
-  const mockPurchaseHistory = [
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+  const [userData, setUserData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user?.name) return;
+      
+      try {
+        const response = await fetch(`http://localhost:8090/req/users/${user.name}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const data = await response.json();
+        setUserData(data);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user?.name]);
+
+  const purchaseHistory = userData?.purchases || [
     {
       id: '1',
       productName: 'Bamboo Water Bottle',
@@ -48,49 +94,30 @@ const CustomerProfile: React.FC = () => {
     }
   ];
 
-  const mockAchievements = [
-    {
-      id: '1',
-      title: 'Eco Pioneer',
-      description: 'First purchase of a very low impact product',
-      icon: '🌱',
-      earned: true,
-      date: new Date('2024-01-05')
-    },
-    {
-      id: '2',
-      title: 'Carbon Crusher',
-      description: 'Saved 10kg of CO₂ through purchases',
-      icon: '🌍',
-      earned: true,
-      date: new Date('2024-01-15')
-    },
-    {
-      id: '3',
-      title: 'Sustainable Shopper',
-      description: 'Made 5 eco-friendly purchases',
-      icon: '🛍️',
-      earned: false
-    },
-    {
-      id: '4',
-      title: 'Eco Warrior',
-      description: 'Reach 1000 eco points',
-      icon: '🏆',
-      earned: false
-    }
-  ];
+  const achievements = userData?.achievements || [];
 
-  const totalEcoPoints = mockPurchaseHistory.reduce((sum, purchase) => sum + purchase.ecoPoints, 0);
-  const totalCarbonSaved = mockPurchaseHistory.reduce((sum, purchase) => sum + purchase.carbonFootprint, 0);
+  const totalEcoPoints = userData?.ecoPoints || purchaseHistory.reduce((sum: number, purchase: any) => sum + (purchase.ecoPoints || 0), 0);
+  const totalCarbonSaved = userData?.totalCarbonSaved || purchaseHistory.reduce((sum: number, purchase: any) => sum + (purchase.carbonFootprint || 0), 0);
 
   const userRank = getUserRank(user?.id || '');
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: User },
-    { id: 'purchases', label: 'Purchases', icon: ShoppingBag },
+    { id: 'orders', label: 'My Orders', icon: Package },
+    { id: 'purchases', label: 'Purchase History', icon: ShoppingBag },
     { id: 'achievements', label: 'Achievements', icon: Trophy }
   ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-eco-50 to-eco-100 flex items-center justify-center">
+        <div className="loading-shimmer rounded-full p-8 flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eco-600"></div>
+          <p className="text-eco-600 font-medium animate-pulse">Loading profile data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-eco-50 to-eco-100 py-8">
@@ -114,7 +141,7 @@ const CustomerProfile: React.FC = () => {
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{user?.name}</h1>
                   <p className="text-gray-600">{user?.email}</p>
-                  <p className="text-sm text-eco-600">Member since {user?.createdAt?.toLocaleDateString()}</p>
+                  <p className="text-sm text-eco-600">Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}</p>
                 </div>
                 <button className="eco-button-secondary flex items-center gap-2">
                   <Edit className="w-4 h-4" />
@@ -133,7 +160,7 @@ const CustomerProfile: React.FC = () => {
                   <div className="text-sm text-blue-700">kg CO₂ Saved</div>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-xl border border-purple-200">
-                  <div className="text-2xl font-bold text-purple-600">{mockPurchaseHistory.length}</div>
+                  <div className="text-2xl font-bold text-purple-600">{purchaseHistory.length}</div>
                   <div className="text-sm text-purple-700">Products</div>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-200">
@@ -218,7 +245,7 @@ const CustomerProfile: React.FC = () => {
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h3>
                 <div className="space-y-3">
-                  {mockPurchaseHistory.slice(0, 3).map((purchase) => (
+                  {purchaseHistory.slice(0, 3).map((purchase: any) => (
                     <div key={purchase.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
                       <div className="w-10 h-10 bg-eco-100 rounded-full flex items-center justify-center">
                         <ShoppingBag className="w-5 h-5 text-eco-600" />
@@ -244,7 +271,7 @@ const CustomerProfile: React.FC = () => {
             <div>
               <h3 className="text-xl font-semibold text-gray-900 mb-6">Purchase History</h3>
               <div className="space-y-4">
-                {mockPurchaseHistory.map((purchase) => (
+                {purchaseHistory.map((purchase: any) => (
                   <div key={purchase.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold text-lg text-gray-900">{purchase.productName}</h4>
@@ -274,11 +301,18 @@ const CustomerProfile: React.FC = () => {
             </div>
           )}
 
+          {activeTab === 'orders' && (
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">My Orders</h3>
+              <MyOrders />
+            </div>
+          )}
+
           {activeTab === 'achievements' && (
             <div>
               <h3 className="text-xl font-semibold text-gray-900 mb-6">Achievements & Badges</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {mockAchievements.map((achievement) => (
+                {achievements.map((achievement: any) => (
                   <div 
                     key={achievement.id} 
                     className={`p-6 rounded-xl border-2 transition-all duration-300 ${

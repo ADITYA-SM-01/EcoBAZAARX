@@ -10,6 +10,42 @@ export interface User {
   productsPurchased: number;
   joinDate: Date;
   isVerified: boolean;
+  // Role permission flags
+  isAdmin?: boolean;
+  isSeller?: boolean;
+  phone?: string;
+  address?: string;
+  bio?: string;
+  // Seller specific fields
+  productsListed?: number;
+  totalSales?: number;
+  rating?: number;
+  salesHistory?: Array<{
+    id: string;
+    date: Date;
+    amount: number;
+    product: string;
+  }>;
+  // Admin specific fields
+  totalUsers?: number;
+  activeSellers?: number;
+  ordersToday?: number;
+  recentActivity?: Array<{
+    id: string;
+    type: string;
+    description: string;
+    date: Date;
+  }>;
+  // Social stats
+  followers?: number;
+  following?: number;
+  reviews?: Array<{
+    id: string;
+    rating: number;
+    comment: string;
+    author: string;
+    date: Date;
+  }>;
 }
 
 export type UserRole = 'admin' | 'seller' | 'customer';
@@ -82,4 +118,8 @@ export interface Theme {
   accent: string;
   background: string;
   text: string;
+  gradientPrimary: string;
+  gradientSecondary: string;
+  cardBg: string;
+  boxShadow: string;
 }

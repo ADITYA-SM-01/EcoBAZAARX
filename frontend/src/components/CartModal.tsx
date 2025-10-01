@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { useLeaderboard } from '../context/LeaderboardContext';
+import { motion } from 'framer-motion';
 import { X, Plus, Minus, Trash2, ShoppingCart, Leaf } from 'lucide-react';
+import { getImageUrl } from '../services/ProductService';
 
 interface CartModalProps {
   isOpen: boolean;
@@ -15,11 +19,92 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
     totalPrice, 
     removeFromCart, 
     updateQuantity, 
-    clearCart 
+    clearCart,
+    getCartProduct 
   } = useCart();
   
+  const { user } = useAuth();
+  const { leaderboard, updateUserPoints } = useLeaderboard();
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const navigate = useNavigate();
+
+  const createOrder = async () => {
+    if (!user?.id) {
+      // If not logged in, redirect to login
+      navigate('/login');
+      return;
+    }
+
+    setIsCreatingOrder(true);
+    try {
+      const orderData = {
+        totalAmount: totalPrice,
+        items: items.map(item => {
+          const product = getCartProduct(item.productId);
+          return {
+            productId: parseInt(item.productId),
+            productName: product?.name || '',
+            quantity: item.quantity,
+            price: product?.price || 0,
+            image: product?.image || ''
+          };
+        })
+      };
+
+      const response = await fetch(`http://localhost:8090/api/orders/${user.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      await response.json();
+      
+      // Calculate eco points and carbon saved
+      let ecoPoints = 0;
+      let carbonSaved = 0;
+      items.forEach(item => {
+        const product = getCartProduct(item.productId);
+        if (product) {
+          ecoPoints += Math.round((product.price * 0.1) * item.quantity); // 10% of price as points
+          carbonSaved += (product.carbonFootprint || 0) * item.quantity;
+        }
+      });
+      
+      // Update user's leaderboard stats
+      if (ecoPoints > 0 || carbonSaved > 0) {
+        const currentStats = leaderboard.find(entry => entry.userId === user.id) || {
+          userId: user.id,
+          userName: user.name,
+          ecoPoints: 0,
+          totalCarbonSaved: 0,
+          productsPurchased: 0,
+          rank: 0
+        };
+        
+        updateUserPoints(
+          user.id,
+          currentStats.ecoPoints + ecoPoints,
+          currentStats.totalCarbonSaved + carbonSaved,
+          currentStats.productsPurchased + items.reduce((sum, item) => sum + item.quantity, 0)
+        );
+      }
+
+      clearCart();
+      navigate('/profile?tab=orders');
+    } catch (error) {
+      console.error('Error creating order:', error);
+      // You might want to show an error message to the user here
+    } finally {
+      setIsCreatingOrder(false);
+    }
+  };
 
   const handleRemoveItem = async (productId: string) => {
     setIsRemoving(productId);
@@ -43,22 +128,31 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
         onClick={onClose}
       />
       
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative w-full max-w-2xl gradient-modal rounded-xl shadow-2xl transform transition-all duration-300 animate-slide-up">
+        <div 
+          className="relative w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl transform transition-all duration-300 animate-slide-up overflow-hidden"
+          style={{
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          }}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-eco-500 to-eco-600 rounded-lg flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-eco-500/10 to-eco-600/10">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-eco-500 to-eco-600 rounded-xl flex items-center justify-center transform rotate-12 hover:rotate-0 transition-transform duration-300">
+                <ShoppingCart className="w-6 h-6 text-white drop-shadow" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Shopping Cart</h2>
-                <p className="text-sm text-gray-500">{totalItems} items</p>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Shopping Cart
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                </p>
               </div>
             </div>
             <button
@@ -72,12 +166,21 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
           {/* Cart Items */}
           <div className="max-h-96 overflow-y-auto p-6">
             {items.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShoppingCart className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
-                <p className="text-gray-500">Start shopping to add items to your cart</p>
+              <div className="text-center py-16">
+                <motion.div 
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-24 h-24 bg-gradient-to-br from-eco-500/10 to-eco-600/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-12"
+                >
+                  <ShoppingCart className="w-12 h-12 text-eco-500" />
+                </motion.div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                  Your cart is empty
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400">
+                  Start shopping to add eco-friendly products to your cart
+                </p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -86,73 +189,63 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
                   if (!product) return null;
 
                   return (
-                    <div
+                    <motion.div
                       key={item.productId}
-                      className={`flex items-center gap-4 p-4 bg-gray-50 rounded-lg border transition-all duration-300 ${
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className={`flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 ${
                         isRemoving === item.productId 
                           ? 'opacity-0 scale-95 transform -translate-x-4' 
                           : 'opacity-100 scale-100 transform translate-x-0'
                       }`}
                     >
                       {/* Product Image */}
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-white border border-gray-200">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                      <img
+                        src={getImageUrl(product)}
+                        alt={product.name}
+                        className="w-14 h-14 object-cover rounded-md border border-gray-100"
+                      />
 
-                      {/* Product Info */}
+                      {/* Product Name */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 truncate">{product.name}</h4>
-                        <p className="text-sm text-gray-500">{product.category}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className={`w-3 h-3 rounded-full ${
-                            product.carbonFootprint <= 0.8 ? 'bg-eco-500' : 
-                            product.carbonFootprint <= 1.5 ? 'bg-eco-400' : 'bg-carbon-500'
-                          }`} />
-                          <span className="text-xs text-gray-500">
-                            {product.carbonFootprint} kg CO₂
-                          </span>
-                        </div>
+                        <div className="font-semibold text-gray-900 dark:text-white truncate">{product.name}</div>
                       </div>
 
                       {/* Quantity Controls */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}
-                          className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors duration-200"
+                          className="w-7 h-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                        <span className="w-7 text-center text-sm font-bold">{item.quantity}</span>
                         <button
                           onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
-                          className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors duration-200"
+                          className="w-7 h-7 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
 
                       {/* Price */}
-                      <div className="text-right">
-                        <div className="font-medium text-gray-900">
-                          ${(product.price * item.quantity).toFixed(2)}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          ${product.price.toFixed(2)} each
+                      <div className="text-right min-w-[70px]">
+                        <div className="font-bold text-gray-900 dark:text-white">
+                          ₹{(product.price * item.quantity).toFixed(2)}
                         </div>
                       </div>
 
                       {/* Remove Button */}
                       <button
                         onClick={() => handleRemoveItem(item.productId)}
-                        className="p-2 text-gray-400 hover:text-red-500 transition-colors duration-200 rounded-lg hover:bg-red-50"
+                        className="p-2 text-gray-400 hover:text-red-500 rounded-lg"
+                        title="Remove"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -192,13 +285,20 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
                   </div>
                 </div>
                 <button
-                  className="eco-button px-8 py-3 text-base"
-                  onClick={() => {
-                    onClose();
-                    navigate('/payment');
-                  }}
+                  className="eco-button px-8 py-3 text-base relative"
+                  onClick={createOrder}
+                  disabled={isCreatingOrder}
                 >
-                  Proceed to Checkout
+                  {isCreatingOrder ? (
+                    <>
+                      <span className="opacity-0">Proceed to Checkout</span>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    </>
+                  ) : (
+                    'Proceed to Checkout'
+                  )}
                 </button>
               </div>
             </div>

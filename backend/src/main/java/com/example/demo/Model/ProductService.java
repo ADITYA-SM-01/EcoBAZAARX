@@ -1,7 +1,5 @@
 package com.example.demo.Model;
 
-import com.example.demo.Model.Product;
-import com.example.demo.Model.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +17,28 @@ public class ProductService {
 
     public List<Product> getAllProducts() {
         return productRepository.findAll();
+    }
+
+
+    public List<Product> getProductsBySeller(Long sellerId) {
+        return productRepository.findBySellerId(sellerId);
+    }
+
+    /**
+     * Get all products by category
+     */
+    public List<Product> getProductsByCategory(String category) {
+        return productRepository.findByCategoryIgnoreCase(category);
+    }
+
+    /**
+     * Optional: Get all products (active only)
+     */
+    public List<Product> getAllActiveProducts() {
+        return productRepository.findAll()
+                .stream()
+                .filter(Product::getIsActive)
+                .toList();
     }
 
     public Product getProductById(Long id) {

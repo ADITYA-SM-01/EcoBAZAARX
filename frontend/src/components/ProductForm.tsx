@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types/product';
+import { useAuth } from '../context/AuthContext';
 import { 
   Package, 
   DollarSign, 
@@ -10,9 +11,10 @@ import {
   FileText,
   X,
   Save,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
-import { addProduct, updateProduct } from '../services/ProductService';
+import { addProduct, updateProduct, getImageUrl } from '../services/ProductService';
 
 interface ProductFormProps {
   product?: Product | null;
@@ -21,6 +23,20 @@ interface ProductFormProps {
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) => {
+  const { currentUser } = useAuth();
+
+  // Check if user is authenticated and is a seller
+  if (!currentUser || currentUser.role !== 'seller') {
+    return (
+      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+        <div className="flex items-center space-x-2">
+          <AlertTriangle className="w-5 h-5 text-yellow-600" />
+          <p>You must be logged in as a seller to manage products.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -36,9 +52,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     isActive: true
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string>('');
+
+  
 
   const categories = [
     'Electronics',
@@ -50,7 +69,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     'Food & Beverages',
     'Automotive',
     'Health & Wellness',
-    'Toys & Games'
+    'Toys & Games',
+    'others'
   ];
 
   useEffect(() => {
@@ -69,7 +89,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
         unitsSold: product.unitsSold?.toString() || '',
         isActive: product.isActive !== undefined ? product.isActive : true
       });
-  setImagePreview(product.image ?? "");
+      setImagePreview(getImageUrl(product));
       setImageFile(null);
     }
   }, [product]);
@@ -96,6 +116,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     if (file) {
        // Rename file to avoid conflicts
       setImageFile(file);
+      console.log("hi");
+      console.log(file);
       setImagePreview(URL.createObjectURL(file));
     }
   };
@@ -138,58 +160,58 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     }
     setIsLoading(true);
     try {
-      // Prepare product data (exclude image)
-      let imageUrl = imagePreview;
-      let productId = product ? product.id : null;
-      // Build product data in the required backend format
+      // Always create product with imageUrl null
       const productData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
         price: parseFloat(formData.price),
         brand: formData.brand.trim(),
-        sellerId: '1', // Set sellerId as needed (e.g., from context or user)
+        sellerId: currentUser.id,
         category: formData.category,
         stock: formData.stock ? parseInt(formData.stock) : 0,
         carbonFootprint: parseFloat(formData.carbonFootprint),
         sustainablePackaging: !!formData.sustainablePackaging,
         rating: parseFloat(formData.rating),
         reviews: parseInt(formData.reviews),
-        imageUrl: imageUrl || null,
+        imageUrl: null,
         isActive: !!formData.isActive,
         unitsSold: formData.unitsSold ? parseInt(formData.unitsSold) : 0,
-        // createdAt and updatedAt are set by backend
       };
-      console.log('Sending product data to backend:', productData);
+      let productId: number | string | null = null;
+      // For new product, check image size before creating product
+      if (!product && imageFile && imageFile.size > 1024 * 1024) {
+        setImageError('Please select an image file less than 1 MB.');
+        setIsLoading(false);
+        return;
+      }
       if (product) {
-        await updateProduct(Number(product.id), { ...productData, image: imageUrl });
+        // If editing, update product (do not change imageUrl here)
+        await updateProduct(Number(product.id), productData);
         productId = product.id;
       } else {
-        // 1. Add product (without image)
-        const response = await addProduct({ ...productData, image: '' });
-        productId = response.id;
+        // Always create with imageUrl null
+        const response = await addProduct(productData);
+        console.log(response);
+        productId = response;
       }
-      // 2. Upload image if new image file selected and productId exists
+      // Upload image if present and productId exists
       if (imageFile && productId) {
-        const extension = imageFile.name.split('.').pop();
-    const newName = `${productId}.${extension}`;
-    const renamedFile = new File([imageFile], newName, { type: imageFile.type });
-    setImageFile(renamedFile);
-    setImagePreview(URL.createObjectURL(renamedFile));
+        setImageError(null);
         const formDataImg = new FormData();
-        formDataImg.append('image', imageFile);
-        // Use the correct backend endpoint for image upload
+        formDataImg.append('file', imageFile);
         const uploadResponse = await fetch(`http://localhost:8090/api/products/${productId}/upload`, {
           method: 'POST',
           body: formDataImg
         });
-        if (uploadResponse.ok) {
-          const data = await uploadResponse.json();
-          imageUrl = data.image || imageUrl;
-        } else {
-          throw new Error('Image upload failed');
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('Image upload failed:', errorText);
+          setImageError('Image upload failed. Please select a file less than 1 MB and try again.');
+          setIsLoading(false);
+          return;
         }
       }
-      onSave({ ...productData, image: imageUrl });
+      onSave(productData);
     } catch (error) {
       console.error('Error saving product:', error);
       alert('Error saving product: ' + (error instanceof Error ? error.message : error));
@@ -205,7 +227,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {imageError && (
+          <div className="p-2 bg-red-100 text-red-700 rounded mb-2 text-sm">
+            {imageError}
+          </div>
+        )}
       {/* Product Name */}
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -262,7 +289,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-            Price ($) *
+            Price (₹) *
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

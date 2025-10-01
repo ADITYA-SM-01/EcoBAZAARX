@@ -19,44 +19,64 @@ export const useTheme = () => {
 
 const availableThemes: Theme[] = [
   {
-    name: 'Eco Green',
-    primary: '#22c55e',
-    secondary: '#16a34a',
-    accent: '#84cc16',
-    background: '#f0fdf4',
-    text: '#14532d'
+    name: 'Forest Breeze',
+    primary: '#10b981',
+    secondary: '#059669',
+    accent: '#34d399',
+    background: 'linear-gradient(120deg, #f0fdf4 0%, #ecfdf5 100%)',
+    text: '#064e3b',
+    gradientPrimary: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    gradientSecondary: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
+    cardBg: 'rgba(255, 255, 255, 0.9)',
+    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.1)'
   },
   {
-    name: 'Ocean Blue',
-    primary: '#3b82f6',
-    secondary: '#1d4ed8',
-    accent: '#06b6d4',
-    background: '#eff6ff',
-    text: '#1e3a8a'
+    name: 'Ocean Depth',
+    primary: '#0ea5e9',
+    secondary: '#0284c7',
+    accent: '#38bdf8',
+    background: 'linear-gradient(120deg, #f0f9ff 0%, #e0f2fe 100%)',
+    text: '#075985',
+    gradientPrimary: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+    gradientSecondary: 'linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%)',
+    cardBg: 'rgba(255, 255, 255, 0.9)',
+    boxShadow: '0 8px 32px rgba(14, 165, 233, 0.1)'
   },
   {
-    name: 'Sunset Orange',
-    primary: '#f97316',
-    secondary: '#ea580c',
-    accent: '#f59e0b',
-    background: '#fff7ed',
-    text: '#9a3412'
+    name: 'Twilight Rose',
+    primary: '#f43f5e',
+    secondary: '#e11d48',
+    accent: '#fb7185',
+    background: 'linear-gradient(120deg, #fff1f2 0%, #ffe4e6 100%)',
+    text: '#9f1239',
+    gradientPrimary: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+    gradientSecondary: 'linear-gradient(135deg, #fb7185 0%, #f43f5e 100%)',
+    cardBg: 'rgba(255, 255, 255, 0.9)',
+    boxShadow: '0 8px 32px rgba(244, 63, 94, 0.1)'
   },
   {
-    name: 'Royal Purple',
+    name: 'Aurora Night',
     primary: '#8b5cf6',
     secondary: '#7c3aed',
-    accent: '#a855f7',
-    background: '#faf5ff',
-    text: '#581c87'
+    accent: '#a78bfa',
+    background: 'linear-gradient(120deg, #f5f3ff 0%, #ede9fe 100%)',
+    text: '#5b21b6',
+    gradientPrimary: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+    gradientSecondary: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
+    cardBg: 'rgba(255, 255, 255, 0.9)',
+    boxShadow: '0 8px 32px rgba(139, 92, 246, 0.1)'
   },
   {
-    name: 'Midnight Dark',
+    name: 'Dark Cosmos',
     primary: '#6366f1',
     secondary: '#4f46e5',
-    accent: '#8b5cf6',
-    background: '#0f172a',
-    text: '#e2e8f0'
+    accent: '#818cf8',
+    background: 'linear-gradient(120deg, #1e1b4b 0%, #1e1b4b 100%)',
+    text: '#e0e7ff',
+    gradientPrimary: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+    gradientSecondary: 'linear-gradient(135deg, #818cf8 0%, #6366f1 100%)',
+    cardBg: 'rgba(30, 27, 75, 0.9)',
+    boxShadow: '0 8px 32px rgba(99, 102, 241, 0.1)'
   }
 ];
 

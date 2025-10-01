@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+// Component for handling authentication routes
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
-import ProductCatalogue from '../pages/ProductCatalogue';
 
 const AuthRouter: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -25,8 +25,8 @@ const AuthRouter: React.FC = () => {
   }
 
   if (isAuthenticated) {
-    console.log('User is authenticated, showing ProductCatalogue...');
-    return <ProductCatalogue />;
+    // If authenticated, allow access to intended route
+    return null;
   }
 
   console.log('User is not authenticated, showing login/signup...');

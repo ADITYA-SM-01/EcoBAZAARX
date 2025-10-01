@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Product } from '../types/product';
 import { useCart } from '../context/CartContext';
-import { fetchProductById } from '../services/ProductService';
+import { fetchProductById, getImageUrl } from '../services/ProductService';
 
 import { 
   Leaf, 
@@ -76,7 +76,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onClose, onAdd
   const handleAddToCart = async () => {
     if (isInCart) return;
     setIsAddingToCart(true);
-    addToCart(product.id);
+    addToCart(String(product.id));
     setShowAdded(true);
     setTimeout(() => setShowAdded(false), 2000);
     setIsAddingToCart(false);
@@ -136,7 +136,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onClose, onAdd
             <div className="space-y-4">
               <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden">
                 <img
-                  src={product.image}
+                  src={getImageUrl(product)}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
