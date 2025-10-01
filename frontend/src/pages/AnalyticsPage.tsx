@@ -7,8 +7,6 @@ import { Product } from '../types/product';
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   PieChart as RePieChart,
   Pie,
   Cell,

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import Navigation from '../components/Navigation';
@@ -11,13 +10,11 @@ import {
   Bell,
   Shield,
   User,
-  ChevronRight,
   ArrowLeft,
   Check
 } from 'lucide-react';
 
 const SettingsPage: React.FC = () => {
-  const navigate = useNavigate();
   const { currentTheme, setTheme, availableThemes } = useTheme();
   const { user } = useAuth();
   type NotificationSettings = {

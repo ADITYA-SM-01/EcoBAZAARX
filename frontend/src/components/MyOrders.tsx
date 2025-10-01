@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Package, Clock, ChevronDown, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Package, Clock, ChevronDown, CheckCircle, XCircle } from 'lucide-react';
 
 interface OrderItem {
   id: number;

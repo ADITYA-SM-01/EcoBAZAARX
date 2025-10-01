@@ -1,6 +1,4 @@
-import { PieChart } from "lucide-react";
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import ThemeSelector from './ThemeSelector';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
@@ -72,11 +70,7 @@ const Navigation: React.FC<NavigationProps> = ({ onSearch, onCartOpen, onWishlis
     }, 200);
   };
 
-  const handleSellerDashboardClick = useCallback(() => {
-    if (user?.role === 'seller') {
-      navigate('/seller/management');
-    }
-  }, [user?.role, navigate]);
+  // Removed unused handleSellerDashboardClick
 
   const handleProfileClick = useCallback(() => {
     if (isAuthenticated && user) {

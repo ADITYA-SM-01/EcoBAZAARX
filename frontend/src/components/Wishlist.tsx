@@ -5,7 +5,6 @@ import { useProductContext } from '../context/ProductContext';
 import { useCart } from '../context/CartContext';
 import ProductCard from './ProductCard';
 import { Heart, ShoppingBag, ArrowLeft, Filter, SortAsc, SortDesc, Trash2, Sparkles } from 'lucide-react';
-import { Product } from '../types/product';
 
 interface WishlistProps {
   isOpen: boolean;

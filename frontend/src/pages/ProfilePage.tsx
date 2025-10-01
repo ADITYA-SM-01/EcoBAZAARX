@@ -4,7 +4,7 @@ import Navigation from '../components/Navigation';
 import CustomerProfile from '../components/CustomerProfile';
 import { useAuth } from '../context/AuthContext';
 import { 
-  User, Edit, Camera, Activity, TrendingUp,
+  User, Edit, Activity, TrendingUp,
   ShoppingBag, Star
 } from 'lucide-react';
 import { motion } from 'framer-motion';
